@@ -1,0 +1,286 @@
+---
+title: "2nd Assignment: Probability and Statistics for Data Analysis"
+output: html_notebook
+---
+
+# 1. In file “data.txt” (available on the e-class assignments site), you willfind the recorded variables Y, X1, X2, X3, X4 (continuous), and W (categorical with three levels) on 150 cases. Using these data, answer the following questions
+
+```{r}
+data <- read.delim("data.txt", header = TRUE, quote = "\"",, sep = " ")
+weightloss <- read.delim("weightloss.txt", header = TRUE, quote = "\"",, sep = " ")
+```
+
+## (a) Run the parametric one-way ANOVA of each of the continuous variables (Y, X1, X2, X3, X4) on the categorical variable (W). Specifically,
+
+### (i) provides a graphical representation of each of the continuous versus the categorical variable
+
+```{r}
+unique_W <- unique(data$W)
+cat("Unique W Categories:", unique_W, "\n")
+
+par(mfrow = c(2, 3))
+par(mar = c(4, 4 ,4, 4))
+boxplot(X1~factor(W),data=data,
+        main=paste("X1", "vs W Categories"),
+        xlab="W Categories", ylab="X1",
+        names=c("A","C","B"))
+
+boxplot(X2~factor(W),data=data,
+        main=paste("X2", "vs W Categories"),
+        xlab="W Categories", ylab="X2",
+        names=c("A","C","B"))
+boxplot(X3~factor(W),data=data,
+        main=paste("X3", "vs W Categories"),
+        xlab="W Categories", ylab="X3",
+        names=c("A","C","B"))
+boxplot(X4~factor(W),data=data,
+        main=paste("X4", "vs W Categories"),
+        xlab="W Categories", ylab="X4",
+        names=c("A","C","B"))
+boxplot(Y~factor(W),data=data,
+        main=paste("Y", "vs W Categories"),
+        xlab="W Categories", ylab="Y",
+        names=c("A","C","B"))
+par(mfrow = c(1, 1))
+```
+### (ii) provide the ANOVA output
+### (iii) check the assumptions.
+```{r}
+fitx1<-aov(X1~factor(W),data=data)
+summary(fitx1)
+layout(matrix(1:4,2,2))
+plot(fitx1)
+shapiro.test(fitx1$residuals)
+bartlett.test(X1~factor(W),data=data)
+fligner.test(X1~factor(W),data=data)
+```
+```{r}
+fitx2<-aov(X2~factor(W),data=data)
+summary(fitx2)
+layout(matrix(1:4,2,2))
+plot(fitx2)
+shapiro.test(fitx2$residuals)
+bartlett.test(X2~factor(W),data=data)
+fligner.test(X2~factor(W),data=data)
+```
+```{r}
+fitx3<-aov(X3~factor(W),data=data)
+summary(fitx3)
+layout(matrix(1:4,2,2))
+plot(fitx3)
+shapiro.test(fitx3$residuals)
+bartlett.test(X3~factor(W),data=data)
+fligner.test(X3~factor(W),data=data)
+```
+```{r}
+fitx4<-aov(X4~factor(W),data=data)
+summary(fitx4)
+layout(matrix(1:4,2,2))
+plot(fitx4)
+shapiro.test(fitx4$residuals)
+bartlett.test(X4~factor(W),data=data)
+fligner.test(X4~factor(W),data=data)
+```
+```{r}
+fity<-aov(Y~factor(W),data=data)
+summary(fity)
+layout(matrix(1:4,2,2))
+plot(fity)
+shapiro.test(fity$residuals)
+bartlett.test(Y~factor(W),data=data)
+fligner.test(Y~factor(W),data=data)
+```
+As we can see above, foe all 5 models the residuals are normally distributed, with constant variance and mean value close to 0. So the assumptions exist in our models. 
+
+## (b) Provide a scatter-plot matrix of Y, X1, X2, X3, and X4, annotatingthe different levels of W in each plot using a different color.
+
+```{r}
+data$W <- as.factor(data$W)
+pairs(data[, c("Y", "X1", "X2", "X3", "X4")], col = as.numeric(data$W))
+legend("topright", legend = levels(data$W), col = 1:length(levels(data$W)), pch = 1, title = "W")
+```
+## (c) Run the regression model of Y on X4
+```{r}
+model <- lm(Y ~ X4, data = data)
+summary(model)
+```
+## (d) Run the regression model of Y on all the remaining variables (X1,X2, X3, X4, W), including the non-additive terms (i.e., interactions of the continuous predictors with the categorical).
+```{r}
+model2 <- lm(Y ~ X1 + X2 + X3 + X4 + W + X1:W + X2:W + X3:W + X4:W, data = data)
+summary(model2)
+```
+## (e) Examine the regression assumptions and provide alternatives if any of them fails.
+```{r}
+shapiro.test(model2$residuals)
+layout(matrix(1:4,2,2))
+plot(model2)
+```
+The residuals of our model seem to be normal, with constant variance and mean equal to 0, so the assumptions of our model exist.
+
+## (f) Use the “stepwise regression” approach to examine whether you can reduce the dimension of the model.
+```{r}
+
+fitnull<-lm(Y ~ 1,data=data)
+stepSR<-step(fitnull, scope=list(lower = ~ 1,
+                                 upper = ~ X1 + X2 + X3 + X4 + W + X1:W + X2:W + X3:W + X4:W),
+             direction="both", data=data)
+```
+The dimensionallity of the model was indeed reduced, from 9 independent variables to 5
+
+## (g) Using the model found in (f), provide a point estimate and a 95% confidence interval for the prediction of Y when: (X1, X2, X3, X4, W) = (120, 30, 10, 90, B)
+```{r}
+step_model = lm(Y ~ X1 +X2 + X3 + W + X1:W,data=data)
+summary(step_model)
+
+new_data <- data.frame(X1 = 120, X2 = 30, X3 = 10, W = "B")
+prediction_with_interval <- predict(step_model, newdata = new_data, interval = "confidence")
+predicted_Y <- prediction_with_interval[1]
+lower_bound <- prediction_with_interval[2]
+upper_bound <- prediction_with_interval[3]
+cat("Predicted Y:", predicted_Y, "\n")
+cat("95% Confidence Interval:", lower_bound, "to", upper_bound, "\n")
+```
+## (h) Using the cut() function, create a categorical variable (named Z) with three levels based on the quantiles of X4. Provide the contingency table of X4 and W.
+```{r}
+data$Z <- cut(data$X4, breaks = quantile(data$X4, probs = c(0, 1/3, 2/3, 1)), labels = c("Level1", "Level2", "Level3"))
+contingency_table <- table(data$X4, data$W)
+print(contingency_table)
+```
+### (i) Run the parametric two-way ANOVA of Y on the categorical variables W and Z (including the interaction term). Provide the fit, examine the assumptions, and comment on the significance of the terms.
+```{r}
+model2wayAnova <- aov(Y ~ W * Z, data = data)
+summary(model2wayAnova)
+shapiro.test(model2wayAnova$residuals)
+layout(matrix(1:4,2,2))
+plot(model2wayAnova)
+```
+The residuals of our model are normal with constant variance and 0 mean. Both W and Z variables were statistically significant for our ANOVA model, but the interaction between them wasn't. That could mean that our dependent variable Y has a greater variance due to W and Z variables, but we can't be certain. For a different model the significance values could be different. Still, the p-values for these categorical variables were almost 0, meaning that they were very significant for our model.
+
+# 2. In the file “weightloss.txt”(available on the e-class assignments site)you will find the recorded variables work (categorical with three levels),diet (categorical with four levels), and loss (continue, in calories). More specifically, the data provide the weight loss per day in a 3×4 factorial experiment. The two factors include 3 types of workout and 4 types of diet. Each combination of the two factors is used to be completely randomized.
+
+## (a) Provide boxplots of the weight loss per workout, per diet, and for the combinations of the two categorical factors.
+```{r}
+unique_work <- unique(weightloss$workout)
+cat("Unique Workout Categories:", unique_work, "\n")
+
+unique_d <- unique(weightloss$diet)
+cat("Unique Diet Categories:", unique_d, "\n")
+
+par(mfrow = c(1, 2))
+par(mar = c(2, 2 , 2, 2))
+boxplot(loss~factor(workout),data=weightloss,
+        main=paste("Weight Loss", "vs Workout Type"),
+        xlab="Workout Types", ylab="Loss",
+        names=c("W3","W1","W2"))
+boxplot(loss~factor(diet),data=weightloss,
+        main=paste("Weight Loss", "vs Diet Type"),
+        xlab="Workout Types", ylab="Loss",
+        names=c("D1","D2","D3","D4"))
+
+weightloss$combinations <- interaction(weightloss$workout, weightloss$diet)
+unique_combinations <- levels(weightloss$combinations)
+unique_combinations_array <- as.array(unique_combinations)
+
+par(mfrow = c(1, 1))
+boxplot(loss ~ combinations, data=weightloss,
+        main = "Boxplot per Combination of Categorical Columns",
+        xlab = "Combination",
+        ylab = "Loss",
+        names=unique_combinations_array)
+```
+## (b) Fit a One-Way ANOVA model with the weight loss as a response and the workout (as a factor). Interpret the model parameters.
+```{r}
+model_work <- aov(loss ~ workout, data = weightloss)
+summary(model_work)
+```
+The most important parameters we have to interpret in this model are the mean sum of squares for the workout variable and the residuals, to see which of these have a great effect. As we can see the mean SoS for our variable workout is very low comparing the residuals one (very high p-value of the F-Statistic) meaning that our dependent variable Y doesn't vary depending to the workout but more on other effects.
+
+## (c) In the ANOVA model of (b), is the expected difference between W2 and W3 significant? [TIP: change the reference level appropriately and refit the ANOVA model of question (b)]
+```{r}
+weightloss$workout <- factor(weightloss$workout)
+weightloss$workout <- relevel(weightloss$workout, ref = "W3")
+model_ref_W3 <- aov(loss ~ workout, data = weightloss)
+summary(model_ref_W3)
+
+weightloss$workout <- factor(weightloss$workout)
+weightloss$workout <- relevel(weightloss$workout, ref = "W2")
+model_ref_W2 <- aov(loss ~ workout, data = weightloss)
+summary(model_ref_W2)
+```
+We can see that both models with reference to W2 or W3 are the same.
+
+## (d) Fit a One-Way ANOVA model for the weight loss as response and diet. Interpret the model parameters. Are all treatments significant?
+```{r}
+model_diet <- aov(loss ~ diet, data = weightloss)
+summary(model_diet)
+TukeyHSD(model_diet)
+
+weightloss_excluded <- subset(weightloss, diet != "D1")
+model_excluded <- aov(loss ~ diet, data = weightloss_excluded)
+summary(model_excluded)
+```
+We can see that in the Tuckey test, the pair D2-D1 isn't significant, meaning that for these diets loss varies the same and aren't both significant for our ANOVA model (same information)
+
+## (f) Fit a Two-Way ANOVA model of main effects. Provide the interpretation for the parameters.
+```{r}
+model2wayAnova_loss <- aov(loss ~ workout + diet, data = weightloss)
+summary(model2wayAnova_loss)
+TukeyHSD(model2wayAnova_loss)
+```
+We can see that both diet and workout have significant F-Statistic values, meaning that the mean Sum of Squares for each variable wasn't significantly (or at all) smaller than the one for the Residuals and these categorical values affect the variability of the weight loss.
+
+## (g) Exclude the non-significant levels of the factors and refit the model. Provide the interpretation for the parameters of the new, simplified, model.
+```{r}
+weightloss_excluded_2 <- subset(weightloss, !(diet == "D2"))
+weightloss_excluded_2 <- subset(weightloss_excluded_2, !(workout == "W3"))
+model2wayAnova_loss_ex <- aov(loss ~ workout + diet, data = weightloss_excluded_2)
+summary(model2wayAnova_loss)
+```
+We can see that the results of the new model are the same as the old, without diet D2, meaning that D1 could by itself explain the variability of the weightloss.
+
+## (h) Fit a Two-Way ANOVA model with interactions. Are all the parameters significant
+```{r}
+model2wayAnova_loss_IN <- aov(loss ~ workout * diet, data = weightloss)
+summary(model2wayAnova_loss_IN)
+TukeyHSD(model2wayAnova_loss_IN)
+```
+From the Tuckey Test we can see that not all parameters of the model are significant and we can see many pairs of combinations that provide a non significant p-value (for example W3:D1-W2:D1).
+
+## (i) Using the stepwise method, choose a model based on the AIC criterion starting from the full model (including the main effects and the interaction term). Are all coefficients significant?
+```{r}
+weightloss$workout = as.factor(weightloss$workout)
+weightloss$diet = as.factor(weightloss$diet)
+dummy_variables <- model.matrix(~ workout - 1, data = weightloss)
+weightloss <- cbind(weightloss, dummy_variables)
+dummy_variables <- model.matrix(~ diet - 1, data = weightloss)
+weightloss <- cbind(weightloss, dummy_variables)
+
+fitnull<-lm(loss ~ workoutW1 +workoutW2 + workoutW3 + dietD1 + dietD2 + dietD3 + dietD4 + workoutW1:dietD1 + workoutW1:dietD2 + workoutW1:dietD3 + workoutW1:dietD4 + workoutW2:dietD1 + workoutW2:dietD2 + workoutW2:dietD3 + workoutW2:dietD4 + workoutW3:dietD1 + workoutW3:dietD2 + workoutW3:dietD3 + workoutW3:dietD4,data=weightloss)
+stepSR<-step(fitnull, scope=list(lower = ~ 1,
+                                 upper = ~ workoutW1 +workoutW2 + workoutW3 + dietD1 + dietD2 + dietD3 + dietD4 + workoutW1:dietD1 + workoutW1:dietD2 + workoutW1:dietD3 + workoutW1:dietD4 + workoutW2:dietD1 + workoutW2:dietD2 + workoutW2:dietD3 + workoutW2:dietD4 + workoutW3:dietD1 + workoutW3:dietD2 + workoutW3:dietD3 + workoutW3:dietD4),
+             direction="both", data=weightloss)
+
+final_model = lm(loss~workoutW1 +workoutW2 + dietD1 + dietD2 + dietD3 + workoutW1:dietD2 + workoutW2:dietD2, data=weightloss )
+summary(final_model)
+```
+Yes all the coefficients of the final model are statistically significant.
+
+## (j) Provide a graphical representation for the final model.
+```{r}
+leaps<-regsubsets(loss~workoutW1 +workoutW2 + dietD1 + dietD2 + dietD3 + workoutW1:dietD2 + workoutW2:dietD2, data=weightloss )
+plot(leaps,scale="r2")
+plot(leaps,scale="adjr2")
+```
+## (k) Compare the constant model against the (full) main effects model and the (full) interaction model. Are the models different?
+```{r}
+fitM0<-lm(loss~workoutW1 +workoutW2 + workoutW3 + dietD1 + dietD2 + dietD3 + dietD4 + workoutW1:dietD1 + workoutW1:dietD2 + workoutW1:dietD3 + workoutW1:dietD4 + workoutW2:dietD1 + workoutW2:dietD2 + workoutW2:dietD3 + workoutW2:dietD4 + workoutW3:dietD1 + workoutW3:dietD2 + workoutW3:dietD3 + workoutW3:dietD4,data=weightloss)
+fitM1<-lm(loss~workoutW1 +workoutW2 + workoutW3 + dietD1 + dietD2 + dietD3 + dietD4,data=weightloss)
+fitM2<-lm(loss~1,data=weightloss)
+anova(fitM0,fitM2)
+anova(fitM1,fitM2)
+aic_model0 <- AIC(fitM0)
+aic_model1 <- AIC(fitM1)
+aic_model2 <- AIC(fitM2)
+print(c(AIC = c(aic_model0,aic_model1, aic_model2)))
+```
+Yes, the models are completely different. It can be seen from the AIC values of the larger models that are much lower from the simple model AIC, even though they have more params, meaning that they have a significantly larger likelihood value.
